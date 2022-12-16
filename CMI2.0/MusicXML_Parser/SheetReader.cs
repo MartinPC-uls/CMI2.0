@@ -80,13 +80,30 @@ namespace MusicXML_Parser
             initialize_arrays();
             Console.WriteLine("Initialiazing process...");
             int p = 0;
+
+            NoteType lastNoteType = NoteType.QUARTER;
             foreach (MeasureElement element in elements)
             {
                 char? _note = null;
                 if (element.Type == MeasureElementType.Note)
                 {
                     MusicXml.Domain.Note note = (MusicXml.Domain.Note)element.Element;
-                    _note = GetNote(note);
+                    //_note = GetNote(note);
+                    if (note.Staff == 1)
+                    {
+                        if (note.IsChordTone)
+                        {
+                            DataSet.RemoveAt(DataSet.Count - 1);
+                        }
+                        _note = GetNote(note);
+                        //lastNoteType = note.Type;
+                        DataSet.Add(_note);
+                        DataSet.Add(' ');
+                    }
+                    else
+                    {
+                        continue;
+                    }
                 }
                 else if (element.Type == MeasureElementType.Forward)
                 {
@@ -98,9 +115,8 @@ namespace MusicXML_Parser
                     //Backup backup = (Backup)element.Element;
                     //Console.WriteLine("backup: " + backup.Duration);
                 }
-                DataSet.Add(_note);
                 p++;
-                Console.WriteLine("Processing: " + p / elements.Count * 100 + "%");
+                Console.WriteLine("Processing: " + Math.Round((double)p / elements.Count * 100, 0) + "%");
             }
             System.IO.File.Create(AppDomain.CurrentDomain.BaseDirectory + "dataset.txt").Close();
             // write DataSet into dataset.txt
@@ -108,7 +124,7 @@ namespace MusicXML_Parser
 
             for (int i = 0; i < DataSet.Count; i++)
             {
-                Console.WriteLine("Writing: " + i / (DataSet.Count - 1) * 100 + "%");
+                Console.WriteLine("Writing: " + Math.Round((double)i / (DataSet.Count - 1) * 100, 0) + "%");
                 sw.Write(DataSet[i]);
             }
         }

@@ -8,26 +8,26 @@ namespace CMI.Network
         // W: Weight for input
         // U: Weight for hidden state
         // b: bias
-        protected static double Wa, Ua;
-        protected static double Wi, Ui;
-        protected static double Wf, Uf;
-        protected static double Wo, Uo;
-        protected static double ba;
-        protected static double bi;
-        protected static double bf;
-        protected static double bo;
+        protected static float Wa, Ua;
+        protected static float Wi, Ui;
+        protected static float Wf, Uf;
+        protected static float Wo, Uo;
+        protected static float ba;
+        protected static float bi;
+        protected static float bf;
+        protected static float bo;
 
-        private static double prev_vdWa, prev_vdWi, prev_vdWf, prev_vdWo;
-        private static double prev_vdUa, prev_vdUi, prev_vdUf, prev_vdUo;
-        private static double prev_vdba, prev_vdbi, prev_vdbf, prev_vdbo;
+        private static float prev_vdWa, prev_vdWi, prev_vdWf, prev_vdWo;
+        private static float prev_vdUa, prev_vdUi, prev_vdUf, prev_vdUo;
+        private static float prev_vdba, prev_vdbi, prev_vdbf, prev_vdbo;
 
-        private static double prev_sdWa, prev_sdWi, prev_sdWf, prev_sdWo;
-        private static double prev_sdUa, prev_sdUi, prev_sdUf, prev_sdUo;
-        private static double prev_sdba, prev_sdbi, prev_sdbf, prev_sdbo;
+        private static float prev_sdWa, prev_sdWi, prev_sdWf, prev_sdWo;
+        private static float prev_sdUa, prev_sdUi, prev_sdUf, prev_sdUo;
+        private static float prev_sdba, prev_sdbi, prev_sdbf, prev_sdbo;
 
         public List<char> Predicted_Output;
 
-        private static readonly double LEARNING_RATE = 0.01;
+        private static readonly float LEARNING_RATE = 0.001f;
 
         private static readonly string PARAMETERS_FILE = AppDomain.CurrentDomain.BaseDirectory + "parameters.txt";
 
@@ -45,20 +45,20 @@ namespace CMI.Network
             if (parameters.Length < 12)
                 throw new Exception("Could not read the file. Missing parameters.");
 
-            Wa = double.Parse(parameters[0]);
-            Wi = double.Parse(parameters[1]);
-            Wf = double.Parse(parameters[2]);
-            Wo = double.Parse(parameters[3]);
+            Wa = float.Parse(parameters[0]);
+            Wi = float.Parse(parameters[1]);
+            Wf = float.Parse(parameters[2]);
+            Wo = float.Parse(parameters[3]);
 
-            Ua = double.Parse(parameters[4]);
-            Ui = double.Parse(parameters[5]);
-            Uf = double.Parse(parameters[6]);
-            Uo = double.Parse(parameters[7]);
+            Ua = float.Parse(parameters[4]);
+            Ui = float.Parse(parameters[5]);
+            Uf = float.Parse(parameters[6]);
+            Uo = float.Parse(parameters[7]);
 
-            ba = double.Parse(parameters[8]);
-            bi = double.Parse(parameters[9]);
-            bf = double.Parse(parameters[10]);
-            bo = double.Parse(parameters[11]);
+            ba = float.Parse(parameters[8]);
+            bi = float.Parse(parameters[9]);
+            bf = float.Parse(parameters[10]);
+            bo = float.Parse(parameters[11]);
         }
         public void SaveParameters()
         {
@@ -83,33 +83,7 @@ namespace CMI.Network
             sw.WriteLine(bo);
         }
 
-        public void SeqPrediction(double[] inputs, int output_size, double prev_long = 0, double prev_short = 0)
-        {
-            Predicted_Output = new();
-            double[] outputs = inputs;
-            double[] aux = new double[outputs.Length];
-            for (int i = 0; i < output_size; i++)
-            {
-                for (int j = 0; j < inputs.Length; j++)
-                {
-                    //print("in: " + Denormalize(outputs[j]));
-                    Cell cell = new(outputs[j], prev_long, prev_short);
-                    cell.Forward();
-                    prev_long = cell.ct;
-                    prev_short = cell.ht;
-                    aux[j] = cell.ht;
-                    //print("o: " + Denormalize(cell.ht));
-                }
-                Print(Denormalize(prev_short));
-                Predicted_Output.Add(Denormalize(prev_short));
-                prev_long = 0;
-                prev_short = 0;
-
-                outputs = aux;
-            }
-        }
-
-        public void Prediction(double[] inputs, double prev_long = 0, double prev_short = 0)
+        public void Prediction(float[] inputs, float prev_long = 0, float prev_short = 0)
         {
             Predicted_Output = new();
             for (int i = 0; i < inputs.Length; i++)
@@ -123,34 +97,41 @@ namespace CMI.Network
             }
         }
 
-        public void SeqTrain(List<char[]> splitted_input, List<char[]> splitted_output, int number_of_iterations, int epochs = 1, double prev_long = 0, double prev_short = 0)
+        
+
+        public void Train(List<float[]> inputs, List<float[]> outputs, int number_of_iterations, int epochs = 1, float prev_long = 0, float prev_short = 0)
         {
-            List<double[]> normalized_input = new();
-            List<double[]> normalized_output = new();
-            foreach (var input in splitted_input)
+            float aux_prev_long = prev_long;
+            float aux_prev_short = prev_short;
+            for (int i = 0; i < inputs.Count; i++)
             {
-                normalized_input.Add(Normalize(input));
-                Print(Normalize(input));
-            }
-            foreach (var output in splitted_output)
-            {
-                normalized_output.Add(Normalize(output));
-            }
+                for (int j = 1; j <= number_of_iterations; j++)
+                {
+                    cells = new();
+                    for (int k = 0; k < inputs[i].Length; k++)
+                    {
+                        Cell cell = new(inputs[i][k], prev_long, prev_short);
+                        cell.Forward();
+                        cells.Add(cell);
+                        prev_long = cell.ct;
+                        prev_short = cell.ht;
+                        if (j % epochs == 0)
+                            Print(Denormalize(cell.ht), false);
+                    }
+                    if (j % epochs == 0)
+                        Print("\n");
+                    prev_long = aux_prev_long;
+                    prev_short = aux_prev_short;
 
-            for (int i = 0; i < normalized_input.Count; i++)
-            {
-                Train(normalized_input[i], normalized_output[i], number_of_iterations, epochs, prev_long, prev_short);
-                //if (i)
-                //Print("\nTRAINING PROCESS: " + Math.Round(((((double)i + 1) / (double)normalized_input.Count) * 100.0), 0) + "%", false);
+                    BackPropagationThroughTime(outputs[i]);
+                }
             }
-
-            Print("\nTraining process completed.\n");
         }
 
-        public void Train(double[] inputs, double[] outputs, int number_of_iterations, int epochs = 1, double prev_long = 0, double prev_short = 0)
+        public void Train(float[] inputs, float[] outputs, int number_of_iterations, int epochs = 1, float prev_long = 0, float prev_short = 0)
         {
-            double aux_prev_long = prev_long;
-            double aux_prev_short = prev_short;
+            float aux_prev_long = prev_long;
+            float aux_prev_short = prev_short;
             for (int i = 1; i <= number_of_iterations; i++)
             {
                 cells = new();
@@ -163,7 +144,6 @@ namespace CMI.Network
                     if (i % epochs == 0)
                     {
                         Print(Denormalize(cell.ht), false);
-                        //Print(cell.ht);
                     }
                     prev_long = cell.ct;
                     prev_short = cell.ht;
@@ -172,17 +152,17 @@ namespace CMI.Network
                 prev_long = aux_prev_long;
                 prev_short = aux_prev_short;
 
-                BackPropagationThroughTime(outputs, LEARNING_RATE);
+                BackPropagationThroughTime(outputs);
                 if (i % epochs == 0)
                 {
                     Print("\n");
-                    var total_loss = 0.0;
+                    float total_loss = 0.0f;
                     for (int z = 0; z < cells.Count; z++)
                     {
-                        total_loss += Math.Pow(cells[z].ht - outputs[z], 2);
+                        total_loss += (float)Math.Pow(cells[z].ht - outputs[z], 2);
                     }
-                    total_loss /= (double)outputs.Length;
-                    Print("TRAINING PROCESS: " + Math.Round(((((double)i + 1) / (double)number_of_iterations) * 100.0), 0) + "%\tloss: " +
+                    total_loss /= (float)outputs.Length;
+                    Print("TRAINING PROCESS: " + Math.Round(((((float)i + 1) / (float)number_of_iterations) * 100.0), 0) + "%\tloss: " +
                         Decimal.Parse(total_loss.ToString(), System.Globalization.NumberStyles.AllowExponent | System.Globalization.NumberStyles.AllowDecimalPoint),
                         false);
                 }
@@ -242,11 +222,11 @@ namespace CMI.Network
             bo = 0;
         }
 
-        private void BackPropagationThroughTime(double[] original_output, double learning_rate)
+        private void BackPropagationThroughTime(float[] original_output)
         {
-            double next_dht = 0;
-            double next_dct = 0;
-            double next_f = 0;
+            float next_dht = 0;
+            float next_dct = 0;
+            float next_f = 0;
             for (int i = cells.Count - 1; i >= 0; i--)
             {
                 cells[i].Backpropagation(original_output[i], next_dht, next_dct, next_f);
@@ -254,16 +234,15 @@ namespace CMI.Network
                 next_dct = cells[i].dct;
                 next_f = cells[i].f;
             }
-            //UpdateParameters(learning_rate);
-            AdamOptimizer(learning_rate);
+            AdamOptimizer(LEARNING_RATE);
         }
 
-        private void UpdateParameters(double learning_rate)
+        public void AdamOptimizer(float learning_rate, float beta1 = 0.9f, float beta2 = 0.999f, float epsilon = 0.00000001f)
         {
-            double dWa = 0, dUa = 0, dba = 0;
-            double dWi = 0, dUi = 0, dbi = 0;
-            double dWf = 0, dUf = 0, dbf = 0;
-            double dWo = 0, dUo = 0, dbo = 0;
+            float dWa = 0, dUa = 0, dba = 0;
+            float dWi = 0, dUi = 0, dbi = 0;
+            float dWf = 0, dUf = 0, dbf = 0;
+            float dWo = 0, dUo = 0, dbo = 0;
 
             // W and b
             for (int i = 0; i < cells.Count; i++)
@@ -287,56 +266,8 @@ namespace CMI.Network
                 dUo += cells[i + 1].do_ * cells[i].ht;
             }
 
-            // Update weights of input
-            Wa -= learning_rate * dWa;
-            Wi -= learning_rate * dWi;
-            Wf -= learning_rate * dWf;
-            Wo -= learning_rate * dWo;
-
-            // Update weights of hidden state
-            Ua -= learning_rate * dUa;
-            Ui -= learning_rate * dUi;
-            Uf -= learning_rate * dUf;
-            Uo -= learning_rate * dUo;
-
-            // Update biases
-            ba -= learning_rate * dba;
-            bi -= learning_rate * dbi;
-            bf -= learning_rate * dbf;
-            bo -= learning_rate * dbo;
-        }
-
-        public void AdamOptimizer(double learning_rate, double beta1 = 0.9, double beta2 = 0.999, double epsilon = 0.00000001)
-        {
-            double dWa = 0, dUa = 0, dba = 0;
-            double dWi = 0, dUi = 0, dbi = 0;
-            double dWf = 0, dUf = 0, dbf = 0;
-            double dWo = 0, dUo = 0, dbo = 0;
-
-            // W and b
-            for (int i = 0; i < cells.Count; i++)
-            {
-                dWa += cells[i].da * cells[i].x;
-                dWi += cells[i].di * cells[i].x;
-                dWf += cells[i].df * cells[i].x;
-                dWo += cells[i].do_ * cells[i].x;
-
-                dba += cells[i].da;
-                dbi += cells[i].di;
-                dbf += cells[i].df;
-                dbo += cells[i].do_;
-            }
-            // U
-            for (int i = 0; i < cells.Count - 1; i++)
-            {
-                dUa += cells[i + 1].da * cells[i].ht;
-                dUi += cells[i + 1].di * cells[i].ht;
-                dUf += cells[i + 1].df * cells[i].ht;
-                dUo += cells[i + 1].do_ * cells[i].ht;
-            }
-
-            double min = -1;
-            double max = 1;
+            /*float min = -1;
+            float max = 1;
 
             dWa = ClipGradient(dWa, min, max, true);
             dWi = ClipGradient(dWi, min, max, true);
@@ -351,69 +282,59 @@ namespace CMI.Network
             dba = ClipGradient(dba, min, max, true);
             dbi = ClipGradient(dbi, min, max, true);
             dbf = ClipGradient(dbf, min, max, true);
-            dbo = ClipGradient(dbo, min, max, true);
-            /*Print("dWa: " + dWa);
-            Print("dWi: " + dWi);
-            Print("dWf: " + dWf);
-            Print("dWo: " + dWo);
+            dbo = ClipGradient(dbo, min, max, true);*/
 
-            Print("dUa: " + dUa);
-            Print("dUi: " + dUi);
-            Print("dUf: " + dUf);
-            Print("dUo: " + dUo);
+            var _beta1 = 1 - beta1;
 
-            Print("dba: " + dba);
-            Print("dbi: " + dbi);
-            Print("dbf: " + dbf);
-            Print("dbo: " + dbo);*/
+            var vdWa = beta1 * prev_vdWa + _beta1 * dWa;
+            var vdWi = beta1 * prev_vdWi + _beta1 * dWi;
+            var vdWf = beta1 * prev_vdWf + _beta1 * dWf;
+            var vdWo = beta1 * prev_vdWo + _beta1 * dWo;
 
-            var vdWa = beta1 * prev_vdWa + (1 - beta1) * dWa;
-            var vdWi = beta1 * prev_vdWi + (1 - beta1) * dWi;
-            var vdWf = beta1 * prev_vdWf + (1 - beta1) * dWf;
-            var vdWo = beta1 * prev_vdWo + (1 - beta1) * dWo;
+            var vdUa = beta1 * prev_vdUa + _beta1 * dUa;
+            var vdUi = beta1 * prev_vdUi + _beta1 * dUi;
+            var vdUf = beta1 * prev_vdUf + _beta1 * dUf;
+            var vdUo = beta1 * prev_vdUo + _beta1 * dUo;
 
-            var vdUa = beta1 * prev_vdUa + (1 - beta1) * dUa;
-            var vdUi = beta1 * prev_vdUi + (1 - beta1) * dUi;
-            var vdUf = beta1 * prev_vdUf + (1 - beta1) * dUf;
-            var vdUo = beta1 * prev_vdUo + (1 - beta1) * dUo;
+            var vdba = beta1 * prev_vdba + _beta1 * dba;
+            var vdbi = beta1 * prev_vdbi + _beta1 * dbi;
+            var vdbf = beta1 * prev_vdbf + _beta1 * dbf;
+            var vdbo = beta1 * prev_vdbo + _beta1 * dbo;
 
-            var vdba = beta1 * prev_vdba + (1 - beta1) * dba;
-            var vdbi = beta1 * prev_vdbi + (1 - beta1) * dbi;
-            var vdbf = beta1 * prev_vdbf + (1 - beta1) * dbf;
-            var vdbo = beta1 * prev_vdbo + (1 - beta1) * dbo;
+            var _beta2 = 1 - beta2;
 
-            var sdWa = beta2 * prev_sdWa + (1 - beta2) * Math.Pow(dWa, 2);
-            var sdWi = beta2 * prev_sdWi + (1 - beta2) * Math.Pow(dWi, 2);
-            var sdWf = beta2 * prev_sdWf + (1 - beta2) * Math.Pow(dWf, 2);
-            var sdWo = beta2 * prev_sdWo + (1 - beta2) * Math.Pow(dWo, 2);
-
-            var sdUa = beta2 * prev_sdUa + (1 - beta2) * Math.Pow(dUa, 2);
-            var sdUi = beta2 * prev_sdUi + (1 - beta2) * Math.Pow(dUi, 2);
-            var sdUf = beta2 * prev_sdUf + (1 - beta2) * Math.Pow(dUf, 2);
-            var sdUo = beta2 * prev_sdUo + (1 - beta2) * Math.Pow(dUo, 2);
-
-            var sdba = beta2 * prev_sdba + (1 - beta2) * Math.Pow(dba, 2);
-            var sdbi = beta2 * prev_sdbi + (1 - beta2) * Math.Pow(dbi, 2);
-            var sdbf = beta2 * prev_sdbf + (1 - beta2) * Math.Pow(dbf, 2);
-            var sdbo = beta2 * prev_sdbo + (1 - beta2) * Math.Pow(dbo, 2);
+            var sdWa = beta2 * prev_sdWa + _beta2 * (float)Math.Pow(dWa, 2);
+            var sdWi = beta2 * prev_sdWi + _beta2 * (float)Math.Pow(dWi, 2);
+            var sdWf = beta2 * prev_sdWf + _beta2 * (float)Math.Pow(dWf, 2);
+            var sdWo = beta2 * prev_sdWo + _beta2 * (float)Math.Pow(dWo, 2);
+                                                         
+            var sdUa = beta2 * prev_sdUa + _beta2 * (float)Math.Pow(dUa, 2);
+            var sdUi = beta2 * prev_sdUi + _beta2 * (float)Math.Pow(dUi, 2);
+            var sdUf = beta2 * prev_sdUf + _beta2 * (float)Math.Pow(dUf, 2);
+            var sdUo = beta2 * prev_sdUo + _beta2 * (float)Math.Pow(dUo, 2);
+                                                         
+            var sdba = beta2 * prev_sdba + _beta2 * (float)Math.Pow(dba, 2);
+            var sdbi = beta2 * prev_sdbi + _beta2 * (float)Math.Pow(dbi, 2);
+            var sdbf = beta2 * prev_sdbf + _beta2 * (float)Math.Pow(dbf, 2);
+            var sdbo = beta2 * prev_sdbo + _beta2 * (float)Math.Pow(dbo, 2);
 
             // Updating weights of input
-            Wa -= learning_rate * (vdWa / Math.Sqrt(sdWa + epsilon));
-            Wi -= learning_rate * (vdWi / Math.Sqrt(sdWi + epsilon));
-            Wf -= learning_rate * (vdWf / Math.Sqrt(sdWf + epsilon));
-            Wo -= learning_rate * (vdWo / Math.Sqrt(sdWo + epsilon));
+            Wa -= learning_rate * (vdWa / (float)Math.Sqrt(sdWa + epsilon));
+            Wi -= learning_rate * (vdWi / (float)Math.Sqrt(sdWi + epsilon));
+            Wf -= learning_rate * (vdWf / (float)Math.Sqrt(sdWf + epsilon));
+            Wo -= learning_rate * (vdWo / (float)Math.Sqrt(sdWo + epsilon));
+                                          
+            // Updating weights of hidden 
+            Ua -= learning_rate * (vdUa / (float)Math.Sqrt(sdUa + epsilon));
+            Ui -= learning_rate * (vdUi / (float)Math.Sqrt(sdUi + epsilon));
+            Uf -= learning_rate * (vdUf / (float)Math.Sqrt(sdUf + epsilon));
+            Uo -= learning_rate * (vdUo / (float)Math.Sqrt(sdUo + epsilon));
 
-            // Updating weights of hidden state
-            Ua -= learning_rate * (vdUa / Math.Sqrt(sdUa + epsilon));
-            Ui -= learning_rate * (vdUi / Math.Sqrt(sdUi + epsilon));
-            Uf -= learning_rate * (vdUf / Math.Sqrt(sdUf + epsilon));
-            Uo -= learning_rate * (vdUo / Math.Sqrt(sdUo + epsilon));
-
-            // Updating biases
-            ba -= learning_rate * (vdba / Math.Sqrt(sdba + epsilon));
-            bi -= learning_rate * (vdbi / Math.Sqrt(sdbi + epsilon));
-            bf -= learning_rate * (vdbf / Math.Sqrt(sdbf + epsilon));
-            bo -= learning_rate * (vdbo / Math.Sqrt(sdbo + epsilon));
+            // Updating biases            
+            ba -= learning_rate * (vdba / (float)Math.Sqrt(sdba + epsilon));
+            bi -= learning_rate * (vdbi / (float)Math.Sqrt(sdbi + epsilon));
+            bf -= learning_rate * (vdbf / (float)Math.Sqrt(sdbf + epsilon));
+            bo -= learning_rate * (vdbo / (float)Math.Sqrt(sdbo + epsilon));
 
             prev_vdWa = vdWa;
             prev_vdWi = vdWi;
@@ -446,7 +367,7 @@ namespace CMI.Network
             prev_sdbo = sdbo;
         }
 
-        private double ClipGradient(double gradient, double min, double max, bool normalization)
+        private float ClipGradient(float gradient, float min, float max, bool normalization)
         {
             if (gradient > max)
             {

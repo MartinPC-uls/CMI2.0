@@ -4,28 +4,28 @@ namespace CMI.Network
 {
     public sealed class Cell : LSTM
     {
-        public double x { get; set; }
-        public double ht_1 { get; set; }
-        public double ct_1 { get; set; }
-        public double ct { get; set; }
-        public double ht { get; set; }
-        public double a { get; set; }
-        public double i { get; set; }
-        public double f { get; set; }
-        public double o { get; set; }
+        public float x { get; set; }
+        public float ht_1 { get; set; }
+        public float ct_1 { get; set; }
+        public float ct { get; set; }
+        public float ht { get; set; }
+        public float a { get; set; }
+        public float i { get; set; }
+        public float f { get; set; }
+        public float o { get; set; }
 
-        public double dx { get; set; }
-        public double dht { get; set; }
-        public double dht_1 { get; set; }
-        public double dct { get; set; }
-        public double da { get; set; }
-        public double di { get; set; }
-        public double df { get; set; }
-        public double do_ { get; set; }
+        //public float dx { get; set; }
+        public float dht { get; set; }
+        public float dht_1 { get; set; }
+        public float dct { get; set; }
+        public float da { get; set; }
+        public float di { get; set; }
+        public float df { get; set; }
+        public float do_ { get; set; }
 
-        public double dloss { get; set; }
+        public float dloss { get; set; }
 
-        public Cell(double x, double ct_1, double ht_1) : base()
+        public Cell(float x, float ct_1, float ht_1) : base()
         {
             this.x = x;
             this.ct_1 = ct_1;
@@ -39,13 +39,13 @@ namespace CMI.Network
             OutputGate();
         }
 
-        public void Backpropagation(double target, double next_dht, double next_dct, double next_f)
+        public void Backpropagation(float target, float next_dht, float next_dct, float next_f)
         {
             dloss = ht - target;
             dht = dloss + next_dht;
             dct = dht * o * (1 - Tanh2(ct)) + next_dct * next_f;
 
-            da = dct * i * (1 - Math.Pow(a, 2));
+            da = dct * i * (1 - (float)Math.Pow(a, 2));
             di = dct * a * i * (1 - i);
             df = dct * ct_1 * f * (1 - f);
             do_ = dht * Tanh(ct) * o * (1 - o);

@@ -74,7 +74,7 @@ namespace CMI
                 Console.Write(">>: ");
                 string? nota = Console.ReadLine();
 
-                InicializarModelo("".ToCharArray(), false);
+                InicializarModelo(false);
             }
             else
             {
@@ -84,33 +84,89 @@ namespace CMI
                 Tempo = random.Next(100, 151);
                 Autor = "IA CMI";
                 if (opcion.Equals(""))
-                    InicializarModelo("".ToCharArray(), false);
+                    InicializarModelo(false);
                 else if (opcion.Equals("no"))
-                    InicializarModelo("".ToCharArray(), true);
+                    InicializarModelo(true);
             }
 
 
         }
-
-        public void InicializarModelo(char[] inputs, bool isRandom)
+        
+        public MainProgram(bool train)
         {
-            string __inputs = " `^][` `^][[ YWWYV V JV JRVJVJRVVbV^b3:C3:C3:TRTRTR^7>F7>F7>QT]Q]QT]R^RV^5<E5<E5<TRTRTR^7>F7>F7>TW`R^Q]OW[T[`'3:C3:C3:T[`R^";
+            if (!train)
+            {
+                _ = new MainProgram();
+                return;
+            }
+
+            EntrenarModelo(false);
+            
+        }
+
+        public MainProgram(List<float[]> inputs, List<float[]> outputs)
+        {
+            EntrenarModelo(inputs, outputs);
+        }
+
+        public void EntrenarModelo(List<float[]> inputs, List<float[]> outputs)
+        {
+            //Print("Entrenando el modelo...");
+            //LSTM lstm = new();
+            //lstm.initialize();
+            //lstm.Train(inputs, outputs, 10000000, 1000000);
+
+            InicializarModelo(false);
+
+            
+        }
+
+        public void EntrenarModelo(bool inicializarPesos, string nombreArchivoParametros = "")
+        {
+            Print("Entrenando el modelo...");
+            LSTM lstm = new();
+            if (!inicializarPesos)
+            {
+                //lstm.LoadParameters(nombreArchivoParametros);
+                lstm.LoadParameters();
+            }
+            else
+            {
+                lstm.initialize();
+            }
+            char[] data   = @"  ^ ` ^ ] [   ` ` ^ ] [ [ Y   Y W Y V     V V V V b b       ^ ] ] ] ^ ^     ^ ` ^ ] [   ` ` ^ ] [ [ Y   Y W Y V     V V V V b b".ToCharArray();
+            char[] output = @"  ^ ` ^ ] [   ` ` ^ ] [ [ Y   Y W Y V     V V V V b b       ^ ] ] ] ^ ^     ^ ` ^ ] [   ` ` ^ ] [ [ Y   Y W Y V     V V V V b b".ToCharArray();
+            
+            float[] normalized_input= Normalize(data);
+            float[] normalized_output = Normalize(output);
+            lstm.Train(normalized_input, normalized_output, 1000000, 100000);
+            //lstm.Train(normalized_input, __output, 10000000, 1000000);
+
+            InicializarModelo(false);
+        }
+
+        public void InicializarModelo(bool isRandom)
+        {
+            string __inputs = "_ S T ] S T X S T [ P T Y P T T O P W M P V J M P R V Y";
+            char[] inputs = new char[__inputs.Length];
             if (isRandom)
             {
-                inputs = __inputs.Reverse().ToArray();
+                //inputs = __inputs.Reverse().ToArray();
                 Random random = new();
-                    for (int i = 0; i < 100; i++)
-                    {
-                        inputs[i] = (char)random.Next(32, 121);
-                    }
-            } else
+                for (int i = 0; i < inputs.Length; i++)
+                {
+                    inputs[i] = (char)random.Next(32, 121);
+                }
+            }
+            else
             {
                 inputs = __inputs.ToCharArray();
             }
-            double[] _inputs = Normalize(inputs);
+            float[] _inputs = Normalize(inputs);
             LSTM lstm = new();
 
-            lstm.LoadParameters(AppDomain.CurrentDomain.BaseDirectory + "scale1.txt");
+            //lstm.LoadParameters(AppDomain.CurrentDomain.BaseDirectory + "scale1.txt");
+            lstm.LoadParameters();
 
             lstm.Prediction(_inputs);
 
@@ -142,9 +198,23 @@ namespace CMI
             XmlNode node = score.SelectSingleNode("score-partwise/part[@id='P1']");
             XmlNode measure = music.AddMeasure(node);
 
+            char prev_char = ' ';
+            char[] next_chars = lstm.Predicted_Output.Skip(1).ToArray();
+            int j = 0;
             foreach (var predicted in lstm.Predicted_Output)
             {
-                music.Add(predicted, 1, measure);
+                //music.Add(predicted, 1, measure);
+                if (predicted == ' ') // we're not considering silences
+                {
+                    prev_char = predicted;
+                    j++;
+                    continue;
+                }
+                //Console.WriteLine(predicted);
+                music.Add(predicted, 1, measure, prev_char, next_chars);
+                prev_char = predicted;
+                next_chars = lstm.Predicted_Output.Skip(j + 1).ToArray();
+                j++;
             }
         }
 

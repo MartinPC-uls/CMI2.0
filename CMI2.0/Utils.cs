@@ -4,7 +4,7 @@
     {
         public static void Print(object? obj, bool skipLine = true)
         {
-            if (obj is double[,] matrix)
+            if (obj is float[,] matrix)
             {
                 Console.Write("[");
                 for (int i = 0; i < matrix.GetLength(0); i++)
@@ -23,7 +23,7 @@
                 Console.Write("]");
                 return;
             }
-            else if (obj is double[] vector)
+            else if (obj is float[] vector)
             {
                 Console.Write("[");
                 for (int i = 0; i < vector.Length; i++)
@@ -44,63 +44,58 @@
             }
             Console.WriteLine(obj.ToString());
         }
-        public static double Softmax(double[] x)
+        public static float Softmax(float[] x)
         {
-            double e_x = 0;
-            double sum = 0;
+            float e_x = 0;
+            float sum = 0;
             for (int i = 0; i < x.Length; i++)
             {
-                e_x += Math.Exp(x[i]);
+                e_x += (float)Math.Exp(x[i]);
             }
             for (int i = 0; i < x.Length; i++)
             {
-                sum += Math.Exp(x[i]) / e_x;
+                sum += (float)Math.Exp(x[i]) / e_x;
             }
             return sum;
         }
-        public static double Softmax(double x)
+        public static float Softmax(float x)
         {
-            double e_x = 0;
-            double sum = 0;
-            e_x += Math.Exp(x);
-            sum += Math.Exp(x) / e_x;
+            float e_x = 0;
+            float sum = 0;
+            e_x += (float)Math.Exp(x);
+            sum += (float)Math.Exp(x) / e_x;
             Print("sum: " + e_x);
             return sum;
         }
-        public static double Sigmoid(double x)
+        public static float Sigmoid(float x)
         {
-            return 1 / (1 + Math.Exp(-x));
+            return (float)(1.0f / (1.0f + Math.Exp(-x)));
         }
-        public static double Tanh(double x)
+        public static float Tanh(float x)
         {
-            var result = Math.Tanh(x);
-
-            return result;
+            return (float)Math.Tanh(x);
         }
-        public static double Tanh2(double x)
+        public static float Tanh2(float x)
         {
-            var result = Math.Pow(Math.Tanh(x), 2);
-
-            return result;
+            return (float)Math.Pow(Math.Tanh(x), 2);
         }
-        public static double GenerateRandom()
+        public static float GenerateRandom()
         {
             Random random = new();
-            Print("r: " + (random.NextDouble() - random.NextDouble()));
-            return random.NextDouble() - random.NextDouble();
+            return (float)random.NextDouble();
         }
 
-        public static double GenerateXavierRandom()
+        public static float GenerateXavierRandom()
         {
             // use Xavier initialization
             Random random = new();
             var value = (random.NextDouble() - random.NextDouble()) * Math.Sqrt(2.0 / 2.0);
 
             Print("GENERATED: " + value);
-            return value;
+            return (float)value;
         }
 
-        public static double Round(double value)
+        public static float Round(float value)
         {
             var decPlaces = (int)(((decimal)value % 1) * 100);
             var integralValue = (int)value;
@@ -115,26 +110,26 @@
             }
         }
 
-        public static double[] GenerateRandomMatrix(int size)
+        public static float[] GenerateRandomMatrix(int size)
         {
             Random random = new();
-            double[] result = new double[size];
+            float[] result = new float[size];
             for (int i = 0; i < size; i++)
             {
-                result[i] = random.NextDouble() - random.NextDouble();
+                result[i] = (float)(random.NextDouble() - random.NextDouble());
             }
             return result;
         }
 
-        public static double[,] GenerateRandomMatrix(int xSize, int ySize)
+        public static float[,] GenerateRandomMatrix(int xSize, int ySize)
         {
             Random random = new();
-            double[,] result = new double[xSize, ySize];
+            float[,] result = new float[xSize, ySize];
             for (int i = 0; i < result.GetLength(0); i++)
             {
                 for (int j = 0; j < result.GetLength(1); j++)
                 {
-                    result[i, j] = random.NextDouble() - random.NextDouble();
+                    result[i, j] = (float)(random.NextDouble() - random.NextDouble());
                 }
             }
             return result;

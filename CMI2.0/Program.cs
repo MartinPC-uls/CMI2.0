@@ -10,6 +10,8 @@ using CMI;
 
 List<char[]> input_chunks = new();
 List<char[]> output_chunks = new();
+List<float[]> inputs = new();
+List<float[]> outputs = new();
 void Split(char[] input, char[] output, int chunkSize = 0)
 {
     if (chunkSize == 0)
@@ -32,21 +34,19 @@ void Split(char[] input, char[] output, int chunkSize = 0)
     }
 }
 
-Split(" LQS QULQXPSLPXEDNQIN QVXBVZQV]SXQUUJISVNSUVUSQGJGNEINNPQSEJEEPSSUVX@GLLVUL9@EELNJLNLP@EG>E@EI@ELDG@DL98BE=BDEEJL6EJNNQ".ToCharArray(), "LQS QULQXPSLPXEDNQIN QVXBVZQV]SXQUUJISVNSUVUSQGJGNEINNPQSEJEEPSSUVX@GLLVUL9@EELNJLNLP@EG>E@EI@ELDG@DL98BE=BDEEJL6EJNNQG".ToCharArray(), 10);
-
-/*foreach (var input in input_chunks)
+void NormalizeData(List<char[]> input_chunks, List<char[]> output_chunks)
 {
-    foreach (var i in input)
+    foreach (char[] input_chunk in input_chunks)
     {
-        Print(i, false);
+        inputs.Add(Normalize(input_chunk));
     }
-    Print("\n");
-}*/
+    foreach (char[] output_chunk in output_chunks)
+    {
+        outputs.Add(Normalize(output_chunk));
+    }
+}
 
-//LSTM lstm = new(3);
-//LSTM lstm = new();
-//lstm.LoadParameters();
-//lstm.InitializeWeights();
-//lstm.initialize();
+Split("_ S T ] S T X S T [ P T Y P T T O P W M P V J M P R V Y".ToCharArray(), " S T ] S T X S T [ P T Y P T T O P W M P V J M P R V Y ".ToCharArray(), 5);
+NormalizeData(input_chunks, output_chunks);
 
-MainProgram program = new();
+MainProgram program = new(true);

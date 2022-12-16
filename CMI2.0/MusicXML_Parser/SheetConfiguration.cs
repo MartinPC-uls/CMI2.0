@@ -355,7 +355,7 @@ namespace MusicXML_Parser
 
         }
 
-        public void Add(char ascii, int staff, XmlNode measure)
+        public void Add(char ascii, int staff, XmlNode measure, char prev_char, char[] next_chars)
         {
             string note;
             int? alter;
@@ -378,20 +378,45 @@ namespace MusicXML_Parser
                 alter = null;
             octave = int.Parse(note[note.Length - 1].ToString());
 
+            /*if (next_chars[0] == ' ')
+                noteType = NoteType.QUARTER;
+            else if (next_chars)*/
+
+            /*try
+            {
+                if (next_chars[0] == ' ')
+                    noteType = NoteType.QUARTER;
+                else if (next_chars[1] == ' ')
+                    noteType = NoteType.HALF;
+                else if (next_chars[2] == ' ')
+                    noteType = NoteType.WHOLE;
+                else
+                    noteType = NoteType.QUARTER;
+            }
+            catch (Exception)
+            {
+                noteType = NoteType.QUARTER;
+            }*/
+
             noteType = NoteType.QUARTER;
 
             note = note[0].ToString();
 
-            if (octave <= 3)
+            /*if (octave <= 3)
             {
                 Backup(measure, 96);
                 staff = 2;
-            } // watch this
-
-            AddNote(staff, note, alter, octave, noteType, measure);
+            } // watch this*/
+            bool isChord = false;
+            if (prev_char != ' ')
+            {
+                Console.WriteLine("prev_char:" + prev_char);
+                isChord = true;
+            }
+            AddNote(staff, note, alter, octave, noteType, measure, isChord);
         }
 
-        public void AddNote(int staff, string note, int? alter, int octave, NoteType noteType, XmlNode measure)
+        public void AddNote(int staff, string note, int? alter, int octave, NoteType noteType, XmlNode measure, bool isChord)
         {
             if (Score == null)
                 throw new Exception("Score is null");
@@ -423,6 +448,11 @@ namespace MusicXML_Parser
             voice.InnerText = "1";
             XmlNode _staff = Score.CreateElement("staff");
             _staff.InnerText = staff.ToString();
+            if (isChord)
+            {
+                XmlNode chord = Score.CreateElement("chord");
+                _note.AppendChild(chord);
+            }
             _note.AppendChild(pitch);
             _note.AppendChild(duration);
             _note.AppendChild(_noteType);

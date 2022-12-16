@@ -2,13 +2,13 @@
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
 <score-partwise version="2.0">
   <work>
-    <work-title>CMI-generated</work-title>
+    <work-title>Untitled</work-title>
   </work>
   <identification>
-    <creator type="composer">IA CMI</creator>
+    <creator type="composer">Unknown</creator>
     <encoding>
       <software>MusicXML Parser</software>
-      <encoding-date>2022-12-12</encoding-date>
+      <encoding-date>2022-12-15</encoding-date>
     </encoding>
     <supports element="accidental" type="yes" />
     <supports element="beam" type="yes" />
@@ -49,7 +49,7 @@
         <direction-type>
           <metronome parentheses="no">
             <beat-unit>quarter</beat-unit>
-            <per-minute>111</per-minute>
+            <per-minute>0</per-minute>
           </metronome>
         </direction-type>
       </direction>

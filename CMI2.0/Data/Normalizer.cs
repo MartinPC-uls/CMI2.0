@@ -13,10 +13,10 @@ namespace CMI.Data
         public static List<int[]>? NormalizedDataset;
         public static List<char[]>? DenormalizedDataset;
 
-        private static readonly double MIN = 32;
-        private static readonly double MAX = 122;
+        private static readonly float MIN = 32;
+        private static readonly float MAX = 122;
 
-        private static readonly double MODIFIER = 1000.0;
+        private static readonly float MODIFIER = 1000.0f;
 
         public Normalizer(List<char[]> Dataset)
         {
@@ -24,11 +24,11 @@ namespace CMI.Data
             NormalizedDataset = new();
         }
 
-        public static double[] Normalize(char[] x)
+        public static float[] Normalize(char[] x)
         {
-            double limIzquierdo = 32;
-            double limDerecho, centro = 122;
-            List<double> valoresNormalizados = new List<double>();
+            float limIzquierdo = 32;
+            float limDerecho, centro = 122;
+            List<float> valoresNormalizados = new List<float>();
             foreach (char c in x)
             {
                 //print((c - limIzquierdo) / (centro - limIzquierdo));
@@ -37,9 +37,16 @@ namespace CMI.Data
             return valoresNormalizados.ToArray();
         }
 
-        public static char Denormalize(double output)
+        public static float Normalize(char x)
         {
-            double valor = output * (122 - 32) + 32;
+            float limIzquierdo = 32;
+            float limDerecho, centro = 122;
+            return (x - limIzquierdo) / (centro - limIzquierdo);
+        }
+
+        public static char Denormalize(float output)
+        {
+            float valor = output * (122 - 32) + 32;
             return (char)Math.Round(valor, 0);
         }
     }
