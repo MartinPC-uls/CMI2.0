@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static CMI.Utils;
+using static CMI.MathUtils;
 
 namespace CMI
 {
-    public class Matrix
+    public class MatrixUtils
     {
         public static double Multiply(double[] a, double[] b)
         {

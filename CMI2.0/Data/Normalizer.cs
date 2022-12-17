@@ -3,51 +3,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static CMI.Utils;
+using static CMI.MathUtils;
 
 namespace CMI.Data
 {
     public class Normalizer
     {
-        private List<char[]> Dataset;
-        public static List<int[]>? NormalizedDataset;
-        public static List<char[]>? DenormalizedDataset;
-
         private static readonly float MIN = 32;
         private static readonly float MAX = 122;
 
-        private static readonly float MODIFIER = 1000.0f;
-
-        public Normalizer(List<char[]> Dataset)
-        {
-            this.Dataset = Dataset;
-            NormalizedDataset = new();
-        }
-
         public static float[] Normalize(char[] x)
         {
-            float limIzquierdo = 32;
-            float limDerecho, centro = 122;
-            List<float> valoresNormalizados = new List<float>();
+            List<float> valoresNormalizados = new();
+            
             foreach (char c in x)
-            {
-                //print((c - limIzquierdo) / (centro - limIzquierdo));
-                valoresNormalizados.Add((c - limIzquierdo) / (centro - limIzquierdo));
-            }
+                valoresNormalizados.Add(Normalize(c));
             return valoresNormalizados.ToArray();
         }
 
-        public static float Normalize(char x)
-        {
-            float limIzquierdo = 32;
-            float limDerecho, centro = 122;
-            return (x - limIzquierdo) / (centro - limIzquierdo);
-        }
+        public static float Normalize(char x) => (x - MIN) / (MAX - MIN);
 
-        public static char Denormalize(float output)
-        {
-            float valor = output * (122 - 32) + 32;
-            return (char)Math.Round(valor, 0);
-        }
+        public static char Denormalize(float output) => (char) Math.Round(output* (MAX - MIN) + MIN, 0);
     }
 }

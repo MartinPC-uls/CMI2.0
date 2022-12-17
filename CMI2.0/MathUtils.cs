@@ -1,49 +1,10 @@
-﻿namespace CMI
-{
-    public class Utils
-    {
-        public static void Print(object? obj, bool skipLine = true)
-        {
-            if (obj is float[,] matrix)
-            {
-                Console.Write("[");
-                for (int i = 0; i < matrix.GetLength(0); i++)
-                {
-                    Console.Write("[");
-                    for (int j = 0; j < matrix.GetLength(1); j++)
-                    {
-                        Console.Write(matrix[i, j]);
-                        if (j != matrix.GetLength(1) - 1)
-                            Console.Write("\n");
-                    }
-                    Console.Write("]");
-                    if (i != matrix.GetLength(0) - 1)
-                        Console.Write("\n ");
-                }
-                Console.Write("]");
-                return;
-            }
-            else if (obj is float[] vector)
-            {
-                Console.Write("[");
-                for (int i = 0; i < vector.Length; i++)
-                {
-                    Console.Write(vector[i]);
-                    if (i != vector.Length - 1)
-                        Console.Write(" ");
-                }
-                Console.Write("]");
-                Console.WriteLine();
-                return;
-            }
+﻿using static CMI.ConsoleUtils;
 
-            if (!skipLine)
-            {
-                Console.Write(obj.ToString());
-                return;
-            }
-            Console.WriteLine(obj.ToString());
-        }
+namespace CMI
+{
+    public class MathUtils
+    {
+        
         public static float Softmax(float[] x)
         {
             float e_x = 0;
@@ -134,5 +95,6 @@
             }
             return result;
         }
+       
     }
 }
