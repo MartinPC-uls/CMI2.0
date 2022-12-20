@@ -12,9 +12,30 @@ namespace CMI.Network
         private static readonly string PARAMETERS_FILE_PATH = AppDomain.CurrentDomain.BaseDirectory + "parameters.txt";
         private List<Cell> cells;
 
-        public LSTM()
-        {
+        private string _parametersFile;
 
+        private ForgetGate _forgetGate;
+        private InputNode _inputNode;
+        private InputGate _inputGate;
+        private OutputGate _outputGate;
+
+        public LSTM(bool initializeParameters, string parametersFile = "")
+        {
+            _forgetGate = new();
+            _inputNode = new();
+            _inputGate = new();
+            _outputGate = new();
+
+            _parametersFile = parametersFile;
+
+            if (initializeParameters)
+            {
+                InitializeGateValues();
+            }
+            else
+            {
+                LoadParameters(parametersFile);
+            }
         }
 
         public void LoadParameters(string filePath = "")
@@ -32,26 +53,26 @@ namespace CMI.Network
 
         private void SetBiases(string[] parameters)
         {
-            InputNode._bias = float.Parse(parameters[8]);
-            InputGate._bias = float.Parse(parameters[9]);
-            ForgetGate._bias = float.Parse(parameters[10]);
-            OutputGate._bias = float.Parse(parameters[11]);
+            _inputNode._bias = float.Parse(parameters[8]);
+            _inputGate._bias = float.Parse(parameters[9]);
+            _forgetGate._bias = float.Parse(parameters[10]);
+            _outputGate._bias = float.Parse(parameters[11]);
         }
 
         private void SetHiddenStateWeights(string[] parameters)
         {
-            InputNode._hiddenStateWeight = float.Parse(parameters[4]);
-            InputGate._hiddenStateWeight = float.Parse(parameters[5]);
-            ForgetGate._hiddenStateWeight = float.Parse(parameters[6]);
-            OutputGate._hiddenStateWeight = float.Parse(parameters[7]);
+            _inputNode._hiddenStateWeight = float.Parse(parameters[4]);
+            _inputGate._hiddenStateWeight = float.Parse(parameters[5]);
+            _forgetGate._hiddenStateWeight = float.Parse(parameters[6]);
+            _outputGate._hiddenStateWeight = float.Parse(parameters[7]);
         }
 
         private void SetInputWeights(string[] parameters)
         {
-            InputNode._inputWeight = float.Parse(parameters[0]);
-            InputGate._inputWeight = float.Parse(parameters[1]);
-            ForgetGate._inputWeight = float.Parse(parameters[2]);
-            OutputGate._inputWeight = float.Parse(parameters[3]);
+            _inputNode._inputWeight = float.Parse(parameters[0]);
+            _inputGate._inputWeight = float.Parse(parameters[1]);
+            _forgetGate._inputWeight = float.Parse(parameters[2]);
+            _outputGate._inputWeight = float.Parse(parameters[3]);
         }
 
         private string[] GetParameters(string filePath)
@@ -68,10 +89,12 @@ namespace CMI.Network
             return parameters;
         }
 
-        public void SaveParameters()
+        public void SaveParameters(string path = "")
         {
-            CheckParametersFile();
-            using var sw = new StreamWriter(PARAMETERS_FILE_PATH);
+            if (path == "")
+                path = PARAMETERS_FILE_PATH;
+            CheckParametersFile(path);
+            using var sw = new StreamWriter(path);
             SaveInputWeights(sw);
             SaveHiddenStateWeights(sw);
             SaveBiases(sw);
@@ -79,33 +102,33 @@ namespace CMI.Network
 
         private void SaveInputWeights(StreamWriter sw)
         {
-            sw.WriteLine(InputNode._inputWeight);
-            sw.WriteLine(InputGate._inputWeight);
-            sw.WriteLine(ForgetGate._inputWeight);
-            sw.WriteLine(OutputGate._inputWeight);
+            sw.WriteLine(_inputNode._inputWeight);
+            sw.WriteLine(_inputGate._inputWeight);
+            sw.WriteLine(_forgetGate._inputWeight);
+            sw.WriteLine(_outputGate._inputWeight);
         }
 
         private void SaveHiddenStateWeights(StreamWriter sw)
         {
-            sw.WriteLine(InputNode._hiddenStateWeight);
-            sw.WriteLine(InputGate._hiddenStateWeight);
-            sw.WriteLine(ForgetGate._hiddenStateWeight);
-            sw.WriteLine(OutputGate._hiddenStateWeight);
+            sw.WriteLine(_inputNode._hiddenStateWeight);
+            sw.WriteLine(_inputGate._hiddenStateWeight);
+            sw.WriteLine(_forgetGate._hiddenStateWeight);
+            sw.WriteLine(_outputGate._hiddenStateWeight);
         }
 
         private void SaveBiases(StreamWriter sw)
         {
-            sw.WriteLine(InputNode._bias);
-            sw.WriteLine(InputGate._bias);
-            sw.WriteLine(ForgetGate._bias);
-            sw.WriteLine(OutputGate._bias);
+            sw.WriteLine(_inputNode._bias);
+            sw.WriteLine(_inputGate._bias);
+            sw.WriteLine(_forgetGate._bias);
+            sw.WriteLine(_outputGate._bias);
         }
 
-        private void CheckParametersFile()
+        private void CheckParametersFile(string path)
         {
-            if (File.Exists(PARAMETERS_FILE_PATH))
-                File.Delete(PARAMETERS_FILE_PATH);
-            File.Create(PARAMETERS_FILE_PATH).Close();
+            if (File.Exists(path))
+                File.Delete(path);
+            File.Create(path).Close();
         }
 
         public void Predict(float[] inputs, float previousCellState = 0, float previousHiddenState = 0)
@@ -113,7 +136,7 @@ namespace CMI.Network
             Predicted_Output = new();
             for (int i = 0; i < inputs.Length; i++)
             {
-                Cell cell = new(inputs[i], previousCellState, previousHiddenState);
+                Cell cell = new(inputs[i], previousCellState, previousHiddenState, _forgetGate, _inputNode, _inputGate, _outputGate);
                 cell.Forward();
                 previousCellState = cell.cellState;
                 previousHiddenState = cell.hiddenState;
@@ -121,40 +144,6 @@ namespace CMI.Network
                 Predicted_Output.Add(Denormalize(cell.hiddenState));
             }
         }
-
-        public void Train(List<float[]> inputs,
-                          List<float[]> outputs,
-                          int totalIterations,
-                          int epochs = 1,
-                          float previousCellState = 0,
-                          float previousHiddenState = 0)
-        {
-            float aux_prev_long = previousCellState;
-            float aux_prev_short = previousHiddenState;
-            for (int i = 0; i < inputs.Count; i++)
-            {
-                for (int j = 1; j <= totalIterations; j++)
-                {
-                    cells = new();
-                    for (int k = 0; k < inputs[i].Length; k++)
-                    {
-                        Cell cell = new(inputs[i][k], previousCellState, previousHiddenState);
-                        cell.Forward();
-                        cells.Add(cell);
-                        previousCellState = cell.cellState;
-                        previousHiddenState = cell.hiddenState;
-                        if (j % epochs == 0)
-                            Print(Denormalize(cell.hiddenState), false);
-                    }
-                    if (j % epochs == 0)
-                        Print("\n");
-                    previousCellState = aux_prev_long;
-                    previousHiddenState = aux_prev_short;
-                    BackPropagationThroughTime(outputs[i]);
-                }
-            }
-        }
-
         public void Train(float[] inputs,
                           float[] outputs,
                           int totalIterations,
@@ -166,7 +155,8 @@ namespace CMI.Network
             float auxPreviousHiddenState = previousHiddenState;
             for (int actualIteration = 1; actualIteration <= totalIterations; actualIteration++)
             {
-                if (actualIteration % epochs == 0) Print("\n");
+                if (actualIteration % epochs == 0)
+                    Print("\n");
                 cells = new();
                 FeedForward(inputs, previousCellState, previousHiddenState,epochs,actualIteration);
                 previousCellState = auxPreviousCellState;
@@ -174,7 +164,7 @@ namespace CMI.Network
                 BackPropagationThroughTime(outputs);
                 ShowProgress(actualIteration,totalIterations, epochs, outputs);
             }
-            SaveParameters();
+            SaveParameters(_parametersFile);
         }
 
         private void ShowProgress(int actualIteration,int totalIterations, int epochs, float[] outputs)
@@ -192,20 +182,20 @@ namespace CMI.Network
             }
         }
 
-        private void FeedForward(float[] inputs, float previousCellState, float previousHiddenState, int epochs, int actualIteration)
+        private void FeedForward(float[] inputs, float previousCellState, float previousHiddenState, int epochs, int currentIteration)
         {
             for (int j = 0; j < inputs.Length; j++)
             {
-                Cell cell = new(inputs[j], previousCellState, previousHiddenState);
+                Cell cell = new(inputs[j], previousCellState, previousHiddenState, _forgetGate, _inputNode, _inputGate, _outputGate);
                 cell.Forward();
                 previousCellState = cell.cellState;
                 previousHiddenState = cell.hiddenState;
                 cells.Add(cell);
-                if (actualIteration % epochs == 0) Print(Denormalize(cell.hiddenState), false);
+                if (currentIteration % epochs == 0) Print(Denormalize(cell.hiddenState), false);
             }
         }
 
-        private void ShowTrainingProgress(int totalIterations, float totalLoss, int i)
+        private static void ShowTrainingProgress(int totalIterations, float totalLoss, int i)
         {
             Print("TRAINING PROCESS: " + Math.Round(((((float)i + 1) / (float)totalIterations) * 100.0), 0) + "%\tloss: " +
             Decimal.Parse(totalLoss.ToString(), System.Globalization.NumberStyles.AllowExponent | System.Globalization.NumberStyles.AllowDecimalPoint),
@@ -214,21 +204,21 @@ namespace CMI.Network
 
         public void InitializeGateValues()
         {
-            InputNode._inputWeight = GenerateRandom();
-            InputNode._hiddenStateWeight = GenerateRandom();
-            InputNode._bias = 0;
+            _inputNode._inputWeight = GenerateRandom();
+            _inputNode._hiddenStateWeight = GenerateRandom();
+            _inputNode._bias = 0;
 
-            InputGate._inputWeight = GenerateRandom();
-            InputGate._hiddenStateWeight = GenerateRandom();
-            InputGate._bias = 0;
+            _inputGate._inputWeight = GenerateRandom();
+            _inputGate._hiddenStateWeight = GenerateRandom();
+            _inputGate._bias = 0;
 
-            ForgetGate._inputWeight = GenerateRandom();
-            ForgetGate._hiddenStateWeight = GenerateRandom();
-            ForgetGate._bias = 0;
+            _forgetGate._inputWeight = GenerateRandom();
+            _forgetGate._hiddenStateWeight = GenerateRandom();
+            _forgetGate._bias = 0;
 
-            OutputGate._inputWeight = GenerateRandom();
-            OutputGate._hiddenStateWeight = GenerateRandom();
-            OutputGate._bias = 0;
+            _outputGate._inputWeight = GenerateRandom();
+            _outputGate._hiddenStateWeight = GenerateRandom();
+            _outputGate._bias = 0;
         }
 
         private void BackPropagationThroughTime(float[] originalOutputs)
@@ -251,7 +241,8 @@ namespace CMI.Network
 
         private void UpdateWeights()
         {
-            AdamOptimizer.Optimize(LEARNING_RATE, cells);
+            AdamOptimizer optimizer = new();
+            optimizer.Optimize(LEARNING_RATE, cells, _forgetGate, _inputNode, _inputGate, _outputGate);
         }
 
         private float ClipGradient(float gradient, float min, float max, bool normalization)

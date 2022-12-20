@@ -38,7 +38,13 @@ namespace MusicXML_Parser
         public static int Measures { get; set; }
         public static string FileName { get; set; }
 
-        public SheetConfiguration()
+        public char[] ascii = Enumerable.Range(32, 121).Select(i => (char)i).ToArray();
+
+        public string[] notes;
+        public Dictionary<string, int> note_map;
+        public Dictionary<int, string> note_map_reverse;
+
+        public SheetConfiguration2()
         {
             initialize_arrays();
         }
@@ -305,12 +311,6 @@ namespace MusicXML_Parser
             return measure;
         }
 
-        public char[] ascii = Enumerable.Range(32, 120).Select(i => (char)i).ToArray();
-
-        public string[] notes;
-        public Dictionary<string, int> note_map;
-        public Dictionary<int, string> note_map_reverse;
-
         public void initialize_arrays()
         {
             notes = new string[88];
@@ -346,77 +346,112 @@ namespace MusicXML_Parser
 
             note_map = new Dictionary<string, int>();
             note_map_reverse = new Dictionary<int, string>();
+            note_map.Add("REST", 32);
+            note_map_reverse.Add(32, "REST"); // LAST MODIFICATION, CHANGE IF I NEED TO
             for (int i = 0; i < notes.Length; i++)
             {
-                Console.WriteLine(notes[i] + ", " + (i + 32));
-                note_map.Add(notes[i], i + 32);
-                note_map_reverse.Add(i + 32, notes[i]);
+                note_map.Add(notes[i], i + 33);
+                note_map_reverse.Add(i + 33, notes[i]);
             }
 
         }
 
-        public void Add(char ascii, int staff, XmlNode measure, char prev_char, char[] next_chars)
+        private static bool isChord = false;
+
+        public void Add(char character, int staff, XmlNode measure, char prev_char, char next_char, char next_char2)
         {
             string note;
             int? alter;
-            int octave;
-            NoteType noteType;
+            int? octave;
+            NoteType? noteType = null;
 
-            int index = (int)ascii;
-            /*if (index >= 120)
-                index = 119;*/
-            char character = this.ascii[index];
+            int index = character;
+            int next_index = next_char;
+            int next_index2 = next_char2;
 
-            // get string note from ascii note_map
-            note = note_map_reverse[index];
+            bool dot = false;
 
-            Console.WriteLine("note: " + note);
+            if (index >= 32 && index <= 121)
+            {
+                note = GetNote(index);
+                if (note != "REST")
+                {
+                    alter = GetAlter(note);
+                    octave = GetOctave(note);
+                }
+                else
+                {
+                    if (next_index >= 161 && next_index <= 171)
+                    {
+                        noteType = GetNoteType(next_char);
+                    }
+                    AddRest(staff, noteType, measure);
+                    return;
+                }
+                if (next_index >= 161 && next_index <= 171)
+                {
+                    noteType = GetNoteType(next_char);
+                }
+                if (next_index2 == 133)
+                {
+                    dot = true;
+                }
+                AddNote(staff, note[0].ToString(), alter, octave, noteType, measure, isChord, dot);
+                if (next_index >= 32 && next_index <= 121)
+                {
+                    Console.WriteLine("current note: " + character);
+                    Console.WriteLine("next note: " + next_char);
+                    Console.WriteLine("next note2: " + next_char2);
+                    isChord = true;
+                }
+                else
+                {
+                    isChord = false;
+                }
+            }
+        }
 
+        public NoteType? GetNoteType(char next_char)
+        {
+            return next_char switch
+            {
+                (char)161 => NoteType._1024TH,
+                (char)162 => NoteType._512TH,
+                (char)163 => NoteType._256TH,
+                (char)164 => NoteType._128TH,
+                (char)165 => NoteType._64TH,
+                (char)166 => NoteType._32ND,
+                (char)167 => NoteType._16TH,
+                (char)168 => NoteType.EIGHTH,
+                (char)169 => NoteType.QUARTER,
+                (char)170 => NoteType.HALF,
+                (char)171 => NoteType.WHOLE,
+                _ => null,
+            };
+        }
+
+        public string GetNote(int index)
+        {
+            return note_map_reverse[index];
+        }
+
+        public int GetOctave(string note)
+        {
+            return int.Parse(note[note.Length - 1].ToString());
+        }
+
+        public int? GetAlter(string note)
+        {
+            int? alter;
             if (note[note.Length - 2].Equals('#'))
                 alter = 1;
             else
                 alter = null;
-            octave = int.Parse(note[note.Length - 1].ToString());
 
-            /*if (next_chars[0] == ' ')
-                noteType = NoteType.QUARTER;
-            else if (next_chars)*/
-
-            /*try
-            {
-                if (next_chars[0] == ' ')
-                    noteType = NoteType.QUARTER;
-                else if (next_chars[1] == ' ')
-                    noteType = NoteType.HALF;
-                else if (next_chars[2] == ' ')
-                    noteType = NoteType.WHOLE;
-                else
-                    noteType = NoteType.QUARTER;
-            }
-            catch (Exception)
-            {
-                noteType = NoteType.QUARTER;
-            }*/
-
-            noteType = NoteType.QUARTER;
-
-            note = note[0].ToString();
-
-            /*if (octave <= 3)
-            {
-                Backup(measure, 96);
-                staff = 2;
-            } // watch this*/
-            bool isChord = false;
-            if (prev_char != ' ')
-            {
-                Console.WriteLine("prev_char:" + prev_char);
-                isChord = true;
-            }
-            AddNote(staff, note, alter, octave, noteType, measure, isChord);
+            return alter;
         }
 
-        public void AddNote(int staff, string note, int? alter, int octave, NoteType noteType, XmlNode measure, bool isChord)
+        public void AddNote(int staff, string note, int? alter, int? octave, NoteType? noteType, XmlNode measure, bool isChord, bool dot)
         {
             if (Score == null)
                 throw new Exception("Score is null");
@@ -436,11 +471,22 @@ namespace MusicXML_Parser
             }
             pitch.AppendChild(_octave);
 
-            string _duration = noteType.Value;
-            XmlNode duration = Score.CreateElement("duration");
-            duration.InnerText = _duration;
-            XmlNode _noteType = Score.CreateElement("type");
-            _noteType.InnerText = GetNoteType(noteType);
+            if (noteType != null)
+            {
+                string _duration = noteType.Value;
+                //XmlNode duration = Score.CreateElement("duration");
+                //duration.InnerText = _duration;
+                XmlNode _noteType = Score.CreateElement("type");
+                _noteType.InnerText = noteType.Value;
+                //_note.AppendChild(duration);
+                _note.AppendChild(_noteType);
+            }
+
+            if (dot)
+            {
+                XmlNode _dot = Score.CreateElement("dot");
+                _note.AppendChild(_dot);
+            }
 
             XmlNode stem = Score.CreateElement("stem");
             stem.InnerText = "down";
@@ -454,8 +500,6 @@ namespace MusicXML_Parser
                 _note.AppendChild(chord);
             }
             _note.AppendChild(pitch);
-            _note.AppendChild(duration);
-            _note.AppendChild(_noteType);
             _note.AppendChild(stem);
             _note.AppendChild(voice);
             _note.AppendChild(_staff);
@@ -467,11 +511,43 @@ namespace MusicXML_Parser
 
         }
 
+        public void AddRest(int staff, NoteType? noteType, XmlNode measure)
+        {
+            if (Score == null)
+                throw new Exception("Score is null");
+
+            XmlNode _note = Score.CreateElement("note");
+            XmlNode rest = Score.CreateElement("rest");
+            _note.AppendChild(rest);
+            if (noteType != null)
+            {
+                string _duration = noteType.Value;
+                //XmlNode duration = Score.CreateElement("duration");
+                //duration.InnerText = _duration;
+                XmlNode _noteType = Score.CreateElement("type");
+                _noteType.InnerText = noteType.Value;
+                //_note.AppendChild(duration);
+                _note.AppendChild(_noteType);
+            }
+            XmlNode voice = Score.CreateElement("voice");
+            voice.InnerText = "1";
+            XmlNode _staff = Score.CreateElement("staff");
+            _staff.InnerText = staff.ToString();
+            _note.AppendChild(voice);
+            _note.AppendChild(_staff);
+            measure.AppendChild(_note);
+
+            //Score.AppendChild(measure);
+
+            Score.Save(FileName);
+        }
+
         public void Backup(XmlNode measure)
         {
             XmlNode backup = Score.CreateElement("backup");
             XmlNode duration = Score.CreateElement("duration");
-            duration.InnerText = "96";
+            //duration.InnerText = "96";
+            duration.InnerText = "96000";
             backup.AppendChild(duration);
             measure.AppendChild(backup);
             Score.Save(FileName);
@@ -485,38 +561,6 @@ namespace MusicXML_Parser
             backup.AppendChild(_duration);
             measure.AppendChild(backup);
             Score.Save(FileName);
-        }
-
-        public string GetNoteType(NoteType note)
-        {
-            switch (note.ToString())
-            {
-                case "384":
-                    return "long";
-                case "192":
-                    return "breve";
-                case "96":
-                    return "whole";
-                case "48":
-                    return "half";
-                case "24":
-                    return "quarter";
-                case "12":
-                    return "eighth";
-                case "6":
-                    return "16th";
-                case "3":
-                    return "32nd";
-                case "1.5":
-                    return "64th";
-                case "0.75":
-                    return "128th";
-                case "0.375":
-                    return "256th";
-
-                default:
-                    return "quarter";
-            }
         }
 
     }

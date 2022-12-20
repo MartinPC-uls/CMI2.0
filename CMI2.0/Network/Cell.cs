@@ -37,11 +37,29 @@ namespace CMI.Network
         //public float dx { get; set; }
         #endregion Derivadas
 
-        public Cell(float input, float previousCellState, float previousHiddenState) : base()
+        #region Gates
+        public InputGate inputGate { get; set; }
+        public InputNode inputNode { get; set; }
+        public ForgetGate forgetGate { get; set; }
+        public OutputGate outputGate { get; set; }
+        #endregion
+
+        public Cell(float input,
+                    float previousCellState,
+                    float previousHiddenState,
+                    ForgetGate forgetGate,
+                    InputNode inputNode,
+                    InputGate inputGate,
+                    OutputGate outputGate)
         {
             this.input = input;
             this.previousCellState = previousCellState;
             this.previousHiddenState = previousHiddenState;
+
+            this.inputGate = inputGate;
+            this.inputNode = inputNode;
+            this.forgetGate = forgetGate;
+            this.outputGate = outputGate;
         }
 
         public void Forward()
@@ -60,14 +78,14 @@ namespace CMI.Network
 
         private void ForgetCellState() => cellState = forgetGateValue * previousCellState;
 
-        private void CalculateForgetGate() => forgetGateValue = ForgetGate.Forward(input, previousHiddenState);
-
-        private void CalculateOutputGate() => outputGateValue = OutputGate.Forward(input, previousHiddenState);
-
+        private void CalculateForgetGate() => forgetGateValue = forgetGate.Forward(input, previousHiddenState);
+        
+        private void CalculateOutputGate() => outputGateValue = outputGate.Forward(input, previousHiddenState);
+         
         private void CalculateUpdateGate()
         {
-            inputNodeValue = InputNode.Forward(input, previousHiddenState);
-            inputGateValue = InputGate.Forward(input, previousHiddenState);
+            inputNodeValue = inputNode.Forward(input, previousHiddenState);
+            inputGateValue = inputGate.Forward(input, previousHiddenState);
         }
 
         public void Backpropagation(float target,
@@ -93,10 +111,10 @@ namespace CMI.Network
         private void CalculateHiddenStateDerivative()
         {
             //dx = Wa * da + Wi * di + Wf * df + Wo * do_; // it's never used
-            float ForgetGateFactor = ForgetGate._hiddenStateWeight * forgetGateDerivative;
-            float InputNodeFactor = InputNode._hiddenStateWeight * inputNodeDerivative;
-            float InputGateFactor = InputGate._hiddenStateWeight * inputGateDerivative;
-            float OutputFactor = OutputGate._hiddenStateWeight * outputGateDerivative;
+            float ForgetGateFactor = forgetGate._hiddenStateWeight * forgetGateDerivative;
+            float InputNodeFactor = inputNode._hiddenStateWeight * inputNodeDerivative;
+            float InputGateFactor = inputGate._hiddenStateWeight * inputGateDerivative;
+            float OutputFactor = outputGate._hiddenStateWeight * outputGateDerivative;
             previousHiddenStateDerivative = InputNodeFactor + InputGateFactor + ForgetGateFactor + OutputFactor;
         }
     }

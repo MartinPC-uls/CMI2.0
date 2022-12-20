@@ -11,6 +11,7 @@ namespace MusicXml.Domain
 			Voice = -1;
 			Staff = -1;
 			IsChordTone = false;
+			Dot = false;
 		}
 
 		public string Type { get; set; }
@@ -30,5 +31,6 @@ namespace MusicXml.Domain
 		public bool IsRest { get; set; }
 
 		public string Accidental { get; set; }
+		public bool Dot { get; set; }
 	}
 }

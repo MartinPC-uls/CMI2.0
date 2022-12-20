@@ -15,23 +15,78 @@ namespace MusicXML_Parser
         public int Tempo { get; set; }
         public int TimeSignatureDenominator { get; set; }
         public int TimeSignatureNumerator { get; set; }
+        public MusicXml.Domain.Key ScoreKey;
+        public char[] _Notes;
         public Score Score;
         public Part Part;
         public List<MusicXml.Domain.MeasureElement> elements = new List<MusicXml.Domain.MeasureElement>();
 
         public static List<char?> DataSet;
+        public static List<char?> DataSet2;
 
         public string[] notes;
         public Dictionary<string, int> note_map;
 
         // create char of ASCII characters
-        public char[] ascii = Enumerable.Range(0, 128).Select(i => (char)i).ToArray();
+        public char[] ascii = Enumerable.Range(0, 171).Select(i => (char)i).ToArray();
         public SheetReader(string file)
         {
+            _Notes = new char[7];
             DataSet = new();
+            DataSet2 = new();
             File = file;
             Score = MusicXml.MusicXmlParser.GetScore(File);
+            ScoreKey = Score.Parts[0].Measures[0].Attributes.Key;
+            GetScaleNotes();
             GetNotes();
+        }
+
+        public void GetScaleNotes()
+        {
+            switch (ScoreKey.Fifths)
+            {
+                case 0:
+                    Console.WriteLine("C MAJOR SCALE");
+                    _Notes = "CDEFGAB".ToCharArray();
+                    break;
+                case 1:
+                    _Notes = "GABCDE".ToCharArray();
+                    break;
+                case 2:
+                    Console.WriteLine("D MAJOR SCALE");
+                    _Notes = "DEGAB".ToCharArray();
+                    break;
+                case 3:
+                    _Notes = "ABDE".ToCharArray();
+                    break;
+                case 4:
+                    _Notes = "EAB".ToCharArray();
+                    break;
+                case 5:
+                    _Notes = "BE".ToCharArray();
+                    break;
+                case 6:
+                    _Notes = "B".ToCharArray();
+                    break;
+                case -1:
+                    _Notes = "FGACDE".ToCharArray();
+                    break;
+                case -2:
+                    _Notes = "CDFGA".ToCharArray();
+                    break;
+                case -3:
+                    _Notes = "FGCD".ToCharArray();
+                    break;
+                case -4:
+                    _Notes = "CFG".ToCharArray();
+                    break;
+                case -5:
+                    _Notes = "FC".ToCharArray();
+                    break;
+                default:
+                    _Notes = "CDEFGAB".ToCharArray();
+                    break;
+            }
         }
 
         /*
@@ -75,58 +130,136 @@ namespace MusicXML_Parser
 
             }
         }
-        public void SaveNotes()
+        public void SaveNotes(string path = "", string path2 = "")
         {
+            if (path.Equals(""))
+                path = AppDomain.CurrentDomain.BaseDirectory + "dataset.txt";
+
             initialize_arrays();
             Console.WriteLine("Initialiazing process...");
             int p = 0;
-
-            NoteType lastNoteType = NoteType.QUARTER;
+            List<MusicXml.Domain.Note> notes = new();
+            Console.WriteLine("Processing...");
             foreach (MeasureElement element in elements)
             {
-                char? _note = null;
                 if (element.Type == MeasureElementType.Note)
                 {
-                    MusicXml.Domain.Note note = (MusicXml.Domain.Note)element.Element;
-                    //_note = GetNote(note);
-                    if (note.Staff == 1)
-                    {
-                        if (note.IsChordTone)
-                        {
-                            DataSet.RemoveAt(DataSet.Count - 1);
-                        }
-                        _note = GetNote(note);
-                        //lastNoteType = note.Type;
-                        DataSet.Add(_note);
-                        DataSet.Add(' ');
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-                else if (element.Type == MeasureElementType.Forward)
-                {
-                    //Forward forward = (Forward)element.Element;
-                    //Console.WriteLine("forward: " + forward.Duration);
-                }
-                else if (element.Type == MeasureElementType.Backup)
-                {
-                    //Backup backup = (Backup)element.Element;
-                    //Console.WriteLine("backup: " + backup.Duration);
+                    notes.Add((MusicXml.Domain.Note)element.Element);
                 }
                 p++;
-                Console.WriteLine("Processing: " + Math.Round((double)p / elements.Count * 100, 0) + "%");
             }
-            System.IO.File.Create(AppDomain.CurrentDomain.BaseDirectory + "dataset.txt").Close();
-            // write DataSet into dataset.txt
-            using var sw = new StreamWriter("dataset.txt");
+            int k = 0;
+            foreach (MusicXml.Domain.Note note in notes)
+            {
+                MusicXml.Domain.Note _note = note;
+                if (k + 1 >= notes.Count)
+                {
+                    break;
+                }
+                MusicXml.Domain.Note? next_note = notes[k + 1];
+                if (_note.Staff == 1)
+                {
+                    DataSet.Add(GetNote(_note));
+                    if (!next_note.IsChordTone || next_note == null)
+                    {
+                        DataSet.Add(GetTime(_note));
+                        if (_note.Dot)
+                        {
+                            DataSet.Add((char)133);
+                        }
+                    }
+                }
+                else if (_note.Staff == 2)
+                {
+                    DataSet2.Add(GetNote(_note));
+                    if (!next_note.IsChordTone || next_note == null)
+                    {
+                        DataSet2.Add(GetTime(_note));
+                        if (_note.Dot)
+                        {
+                            DataSet2.Add((char)133);
+                        }
+                    }
+                }
+                k++;
+            }
+            Console.WriteLine("Processing completed");
+            System.IO.File.Create(path).Close();
+            // write DataSet into dataset_staff1.txt
+            List<char> dataset = DataSet
+                                        .Where(c => c.HasValue)
+                                        .Select(c => c.Value)
+                                        .ToList();
+            List<char> dataset2 = DataSet2
+                                        .Where(c => c.HasValue)
+                                        .Select(c => c.Value)
+                                        .ToList();
 
+            byte[] data = System.Text.Encoding.UTF8.GetBytes(dataset.ToArray());
+            byte[] data2 = System.Text.Encoding.UTF8.GetBytes(dataset2.ToArray());
+
+            using var sw = new StreamWriter(path);
+            Console.WriteLine("Writing staff 1...");
             for (int i = 0; i < DataSet.Count; i++)
             {
-                Console.WriteLine("Writing: " + Math.Round((double)i / (DataSet.Count - 1) * 100, 0) + "%");
-                sw.Write(DataSet[i]);
+                sw.BaseStream.Write(data, i, 1);
             }
+            Console.WriteLine("Writing completed.");
+            Console.WriteLine("Writing staff 2...");
+            using var sw2 = new StreamWriter(path2);
+            for (int i = 0; i < DataSet2.Count; i++)
+            {
+                sw2.BaseStream.Write(data2, i, 1);
+            }
+            Console.WriteLine("Writing completed");
+            Console.WriteLine("Disonancia total: " + ((float)Alterations / (float)Notes) * 100f + "%");
+            Console.WriteLine("Total notas disonantes: " + Alterations);
+            Console.WriteLine("Total notas: " + Notes + "\n");
+        }
+        public char? GetDot(MusicXml.Domain.Note note)
+        {
+            if (note.Dot)
+                return (char)133;
+
+            return null;
+        }
+        public char GetTime(MusicXml.Domain.Note note)
+        {
+            if (note.Type == NoteType._1024TH.Value)
+                return (char)161;
+            else if (note.Type == NoteType._512TH.Value)
+                return (char)162;
+            else if (note.Type == NoteType._256TH.Value)
+                return (char)163;
+            else if (note.Type == NoteType._128TH.Value)
+                return (char)164;
+            else if (note.Type == NoteType._64TH.Value)
+                return (char)165;
+            else if (note.Type == NoteType._32ND.Value)
+                return (char)166;
+            else if (note.Type == NoteType._16TH.Value)
+                return (char)167;
+            else if (note.Type == NoteType.EIGHTH.Value)
+                return (char)168;
+            else if (note.Type == NoteType.QUARTER.Value)
+                return (char)169;
+            else if (note.Type == NoteType.HALF.Value)
+                return (char)170;
+            else if (note.Type == NoteType.WHOLE.Value)
+                return (char)171;
+
+            if (note.Duration == 16)
+                return (char)171;
+            else if (note.Duration == 8)
+                return (char)170;
+            else if (note.Duration == 4)
+                return (char)169;
+            else if (note.Duration == 2)
+                return (char)168;
+            else if (note.Duration == 1)
+                return (char)167;
+
+            return (char)169;
         }
         public char translate(string note, int octave, int duration, bool isChord)
         {
@@ -205,14 +338,29 @@ namespace MusicXML_Parser
 
         }
 
+        private static int Alterations;
+        private static int Notes;
+
         public string GetSpecificNote(MusicXml.Domain.Note note)
         {
             string[] notes = new string[12] { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
             int alter = note.Pitch.Alter;
+            Notes++;
+            if (_Notes.Contains(note.Pitch.Step) && alter != 0)
+            {
+                Alterations++;
+            }
+            else if (!_Notes.Contains(note.Pitch.Step) && alter == 0)
+            {
+                Alterations++;
+            }
             bool condition = ((GetNoteIndex(note) - 1) + alter) >= 0;
             int value = condition ? ((GetNoteIndex(note) - 1) + alter) : 12 + ((GetNoteIndex(note) - 1) + alter);
 
-            return value <= 11 ? notes[((GetNoteIndex(note) - 1) + alter)] : notes[((GetNoteIndex(note) - 1) + alter) - 12];
+            var noteIndex = ((GetNoteIndex(note) - 1) + alter);
+            if (noteIndex == -1)
+                noteIndex = 11;
+            return value <= 11 ? notes[noteIndex] : notes[((GetNoteIndex(note) - 1) + alter) - 12];
         }
         public int GetNoteIndex(MusicXml.Domain.Note note)
         {

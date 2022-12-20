@@ -26,17 +26,20 @@ namespace MusicXML_Parser.Music
     {
         public string Value { get; private set; }
 
-        public static readonly NoteType LONG = new NoteType("384");
-        public static readonly NoteType BREVE = new NoteType("192");
-        public static readonly NoteType WHOLE = new NoteType("96");
-        public static readonly NoteType HALF = new NoteType("48");
-        public static readonly NoteType QUARTER = new NoteType("24");
-        public static readonly NoteType EIGHTH = new NoteType("12");
-        public static readonly NoteType SIXTEENTH = new NoteType("6");
-        public static readonly NoteType THIRTY_SECOND = new NoteType("3");
-        public static readonly NoteType SIXTY_FOURTH = new NoteType("1.5");
-        public static readonly NoteType ONE_HUNDRED_TWENTY_EIGHTH = new NoteType("0.75");
-        public static readonly NoteType TWO_HUNDRED_FIFTY_SIXTH = new NoteType("0.375");
+        public static readonly NoteType _1024TH = new("1024th");
+        public static readonly NoteType _512TH = new("512th");
+        public static readonly NoteType _256TH = new("256th");
+        public static readonly NoteType _128TH = new("128th");
+        public static readonly NoteType _64TH = new("64th");
+        public static readonly NoteType _32ND = new("32nd");
+        public static readonly NoteType _16TH = new("16th");
+        public static readonly NoteType EIGHTH = new("eighth");
+        public static readonly NoteType QUARTER = new("quarter");
+        public static readonly NoteType HALF = new("half");
+        public static readonly NoteType WHOLE = new("whole");
+        public static readonly NoteType BREVE = new("breve");
+        public static readonly NoteType LONG = new("long");
+        public static readonly NoteType MAXIMA = new("maxima");
 
         protected NoteType(string value)
         {

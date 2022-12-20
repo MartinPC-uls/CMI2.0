@@ -40,7 +40,7 @@ namespace CMI
             Console.Clear();
             ShowSheetValues();
             SetFirstNote();
-            InitializeModel(false);
+            //InitializeModel(false, false, "_staff1.txt"); // ????
         }
 
         private void AutoInitialize()
@@ -50,7 +50,7 @@ namespace CMI
             Key = Tonalidad(random.Next(1, 25).ToString());
             Tempo = random.Next(100, 151);
             Autor = "IA CMI";
-            InitializeModel(false);
+            //InitializeModel(false, false, "_staff1.txt"); // ???
         }
 
         private void SetSheetValues()
@@ -202,78 +202,77 @@ namespace CMI
                 _ = new MainProgram();
                 return;
             }
-            TrainModel(false);
-            InitializeModel(false);
+            //TrainModel(true);
+            //TrainModel(@"C:\Users\ghanv\OneDrive\Escritorio\DataSet\Codified\0\staff1", "staff1.txt", true);
+            //TrainModel(@"C:\Users\ghanv\OneDrive\Escritorio\DataSet\Codified\0\staff2", "staff2.txt", true);
+            InitializeModel(false, false, "staff1.txt", "staff2.txt");
         }
 
-        public MainProgram(List<float[]> inputs, List<float[]> outputs)
+        public void TrainModel(string datasetPath, string nombreArchivosParametros, bool inicializarPesos, int epochs = 1)
         {
-            EntrenarModelo(inputs, outputs);
-        }
+            string folderPath = datasetPath;
+            string[] files = Directory.GetFiles(folderPath, "*.txt");
 
-        public void EntrenarModelo(List<float[]> inputs, List<float[]> outputs)
-        {
-            //Print("Entrenando el modelo...");
-            //LSTM lstm = new();
-            //lstm.initialize();
-            //lstm.Train(inputs, outputs, 10000000, 1000000);
-            InitializeModel(false);
-        }
-
-        public void TrainModel(bool inicializarPesos, string nombreArchivoParametros = "")
-        {
-            Print("Entrenando el modelo...");
-            LSTM lstm = new();
-            if (!inicializarPesos)
+            LSTM model = new(inicializarPesos, nombreArchivosParametros);
+            if (inicializarPesos)
             {
-                //lstm.LoadParameters(nombreArchivoParametros);
-                lstm.LoadParameters();
+                model.InitializeGateValues();
             }
-            else lstm.InitializeGateValues();
-            char[] data   = @"  ^ ` ^ ] [   ` ` ^ ] [ [ Y   Y W Y V     V V V V b b       ^ ] ] ] ^ ^     ^ ` ^ ] [   ` ` ^ ] [ [ Y   Y W Y V     V V V V b b".ToCharArray();
-            char[] output = @"  ^ ` ^ ] [   ` ` ^ ] [ [ Y   Y W Y V     V V V V b b       ^ ] ] ] ^ ^     ^ ` ^ ] [   ` ` ^ ] [ [ Y   Y W Y V     V V V V b b".ToCharArray();
-            
-            float[] normalizedInput= Normalize(data);
-            float[] normalizedOutput = Normalize(output);
-            lstm.Train(normalizedInput, normalizedOutput, 1000000, 100000);
-            //lstm.Train(normalized_input, __output, 10000000, 1000000);
+            else
+            {
+                model.LoadParameters(nombreArchivosParametros);
+            }
+            for (int i = 1; i <= epochs; i++)
+            {
+                foreach (string file in files)
+                {
+                    string fileName = Path.GetFileNameWithoutExtension(file);
+                    char[] data = File.ReadAllText(folderPath + "\\" + fileName + ".txt").ToCharArray();
+                    float[] normalizedData = Normalize(data);
+                    model.Train(normalizedData, normalizedData, 1000000, 100000);
+                }
+                Console.Clear();
+                Print("================= EPOCH " + i + "/" + epochs + " =================");
+            }
         }
 
-        public void InitializeModel(bool isRandom)
+        public void InitializeModel(bool isRandom, bool inicializarParametros, string nombreArchivoParametros1, string nombreArchivoParametros2)
         {
-            float[] networkInputs = initializeInputs(isRandom);
-            LSTM lstm = initializeLSTM(networkInputs);
+            //float[] networkInputs = initializeInputs(isRandom);
+            char[] staff1Inputs = @"S JO S LO S X T S Q O N O LO L N L J EJ V J M L M V S M L Q P V T M T L J L T Q L J O N T S L S U V JO JQ O O Q S S Q Q O GL I L IL N L L N O O N L EJ GJ EJ EI J BE J BE N N O N L N J EJ EJ V M MS L X X V T S T T S Q O N L LQ LQ K L N N O Q E Q S T S G N L K L N Q O N L N O Q O GL H H K L CG O O S Q O EL EL J X V U LQU L"
+                                    .ToCharArray();
+            char[] staff2Inputs = @"7 C B 6 4 @ > 2 0 < = 1 2 > < 0 ; DJ EJ 9 8 GJ @ DL 9 EH CH 7 6 EH > BJ 7 C B 6 4 @ = 9 > ; 9 9 2 4 6 7 9 < ; 9 2 2 > < 0 / DJ L EJM 9 8 GJ @ DL 9 E C 7 6 BE G @EH 4 3 4 6 3 4 <C 9E ;E 4 @ > 2 1 = ; / - E C 7 6 B 7 9 2 > < 0 / ;C <C 0 1 =E >E 2 3 ?G @G 8 9 E C 7 6 B > B C 7 5 A @ 4 2 > < 0 / ; 9 E C 7 6 2 7 < > < > 2 7> "
+                                    .ToCharArray();
+
+            float[] network1Inputs = Normalize(staff1Inputs);
+            float[] network2Inputs = Normalize(staff2Inputs);
+            LSTM lstm1 = initializeLSTM(network1Inputs, inicializarParametros, nombreArchivoParametros1);
+            LSTM lstm2 = initializeLSTM(network2Inputs, inicializarParametros, nombreArchivoParametros2);
             SheetConfiguration music = getSheetConfiguration();
             XmlNode measure = getMeasure(music);
-            WriteSheetMusic(lstm, music, measure);
+            WriteSheetMusic(lstm1, music, measure, 1);
+            WriteSheetMusic(lstm2, music, measure, 2);
         }
 
-        private void WriteSheetMusic(LSTM lstm, SheetConfiguration music, XmlNode measure)
+        private void WriteSheetMusic(LSTM lstm, SheetConfiguration music, XmlNode measure, int staff)
         {
-            char prev_char = ' ';
-            char[] next_chars = lstm.Predicted_Output.Skip(1).ToArray();
-            int j = 0;
-            foreach (var predicted in lstm.Predicted_Output)
+            music.Backup(measure);
+            char prev_char1 = ' ';
+            char next_char1 = lstm.Predicted_Output[1];
+            char next_char1_2 = lstm.Predicted_Output[2];
+            for (int i = 0; i < lstm.Predicted_Output.Count - 2; i++)
             {
-                //music.Add(predicted, 1, measure);
-                if (predicted == ' ') // we're not considering silences
-                {
-                    prev_char = predicted;
-                    j++;
-                    continue;
-                }
-                //Console.WriteLine(predicted);
-                music.Add(predicted, 1, measure, prev_char, next_chars);
-                prev_char = predicted;
-                next_chars = lstm.Predicted_Output.Skip(j + 1).ToArray();
-                j++;
+                prev_char1 = lstm.Predicted_Output[i];
+                next_char1 = lstm.Predicted_Output[i + 1];
+                next_char1_2 = lstm.Predicted_Output[i + 2];
+                music.Add(lstm.Predicted_Output[i], staff, measure, prev_char1, next_char1, next_char1_2);
             }
         }
 
-        private LSTM initializeLSTM(float[] networkInputs)
+        private LSTM initializeLSTM(float[] networkInputs, bool initializeParameters, string nombreArchivoParametros)
         {
             //lstm.LoadParameters(AppDomain.CurrentDomain.BaseDirectory + "scale1.txt");
-            LSTM lstm = new();
+            LSTM lstm = new(initializeParameters, nombreArchivoParametros);
             lstm.LoadParameters();
             lstm.Predict(networkInputs);
             return lstm;
@@ -289,7 +288,7 @@ namespace CMI
 
         private float[] initializeInputs(bool isRandom)
         {
-            string __inputs = "_ S T ] S T X S T [ P T Y P T T O P W M P V J M P R V Y";
+            string __inputs = @"  GJN   EIN   GJN   EIN   GJN Z ]   EIN [ Z U   GJN S U V   EIN Q   GJN N   EIN N   GJN N   EIN N   GJN Z ]   EIN [ Z U   GJN S U V   EIN Q   EIN U   GJN Z L L L   Q S T   X V S   V T S   V   V V   X Y [   ] T V   X V S   V   V V   GLO [   EIN Z   GJN S Q S   ILQ U V X   EINQ U V X   EJ GJO N HLQT JNQV   GLO [   EJMQ Y   EHM S T Y   HLQ X V T   EHMQ X V T   EJ GJO M";
             char[] inputs = new char[__inputs.Length];
             if (isRandom) inputs = getRandomInput(__inputs.Length);
             else inputs = __inputs.ToCharArray();

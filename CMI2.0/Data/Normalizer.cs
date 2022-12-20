@@ -10,7 +10,7 @@ namespace CMI.Data
     public class Normalizer
     {
         private static readonly float MIN = 32;
-        private static readonly float MAX = 122;
+        private static readonly float MAX = 171;
 
         public static float[] Normalize(char[] x)
         {

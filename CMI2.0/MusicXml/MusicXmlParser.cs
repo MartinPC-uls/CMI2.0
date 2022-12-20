@@ -121,29 +121,6 @@ namespace MusicXml
 			return score;
 		}
 
-		public static void DecompressFile(string fileToDecompress, string newFile = null)
-		{
-			if (newFile == null)
-				newFile = Path.GetFileNameWithoutExtension(fileToDecompress);
-
-			using (Stream fd = File.Create(newFile + ".dmxl"))
-			using (Stream fs = File.OpenRead(fileToDecompress))
-			using (Stream csStream = new GZipStream(fs, CompressionMode.Decompress))
-			{
-				byte[] buffer = new byte[1024];
-				int nRead;
-				while ((nRead = csStream.Read(buffer, 0, buffer.Length)) > 0)
-				{
-					fd.Write(buffer, 0, nRead);
-				}
-			}
-			if (newFile == null)
-			{
-				File.Delete(fileToDecompress);
-				Path.ChangeExtension(newFile, ".mxl");
-			}
-		}
-
 		public static Forward GetForwardElement(XmlNode node)
 		{
 			var forward = new Forward();
@@ -207,6 +184,10 @@ namespace MusicXml
 			var restNode = noteNode.SelectSingleNode("rest");
 			if (restNode != null)
 				note.IsRest = true;
+
+			var dotNode = noteNode.SelectSingleNode("dot");
+			if (dotNode != null)
+				note.Dot = true;
 
 			return note;
 		}

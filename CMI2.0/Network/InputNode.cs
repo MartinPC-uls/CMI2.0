@@ -4,20 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static CMI.MathUtils;
+using CMI.Network;
 
 namespace CMI2._0.Network
 {
     public class InputNode
     {
-        public static float _inputWeight;
-        public static float _hiddenStateWeight;
-        public static float _bias;
-        public static float weightGradient;
-        public static float hiddenStateWeightGradient;
-        public static float biasGradient;
+        public float _inputWeight;
+        public float _hiddenStateWeight;
+        public float _bias;
+        public float weightGradient;
+        public float hiddenStateWeightGradient;
+        public float biasGradient;
 
 
-        public static float Forward(float input, float hiddenState)
+        public float Forward(float input, float hiddenState)
         {
             return Tanh(input * _inputWeight + hiddenState * _hiddenStateWeight + _bias);
         }
